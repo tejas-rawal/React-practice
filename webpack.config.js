@@ -1,6 +1,9 @@
 // this lets us require files with JSX/ES6 in them
 require('babel-core/register')
 
+const NODE_ENV = process.env.NODE_ENV
+const dotenv = require('dotenv')
+
 const webpack = require('webpack')
 const fs = require('fs');
 const path = require('path'),
@@ -14,8 +17,10 @@ const src = join(root, 'src')
 const modules = join(root, 'node_modules')
 const dest = join(root, 'dist')
 
-const NODE_ENV = process.env.NODE_ENV
 const isDev = NODE_ENV === 'development'
+const isTest = NODE_ENV === 'test'
+
+// getConfig setup
 
 var config = getConfig({
   isDev: isDev,
@@ -23,6 +28,34 @@ var config = getConfig({
   out: dest,
   clearBeforeBuild: true
 })
+
+// External setup
+
+if (isTest) {
+  config.externals = {
+    'react/lib/ReactContext': true,
+    'react/lib/ExecutionEnvironment': true
+  }
+
+  config.plugins = config.plugins.filter(p => {
+    const name = p.constructor.toString()
+    const fnName = name.match(/^function (.*)\((.*\))/)
+    const idx = ['DedupePlugin', 'UglifyJsPlugin'].indexOf(fnName[1])
+    return idx < 0
+  })
+}
+
+//
+
+config.resolve.root = [src, modules]
+config.resolve.alias = {
+  'css': join(src, 'styles'),
+  'containers': join(src, 'containers'),
+  'components': join(src, 'components'),
+  'utils': join(src, 'utils')
+}
+
+// Css loading setup
 
 config.postcss = [].concat([
   require('precss')({}),
@@ -58,6 +91,27 @@ config.module.loaders.push({
   include: [modules],
   loader: 'style!css'
 })
+
+// ENV variables
+
+const dotEnvVars = dotenv.config()
+const environmentEnv = dotenv.config({
+  path: join(root, 'config', `${NODE_ENV}.config.js`),
+  silent: true
+})
+const envVariables = Object.assign({}, dotEnvVars, environmentEnv)
+
+const defines = Object.keys(envVariables).reduce((memo, key) => {
+  const val = JSON.stringify(envVariables[key])
+  memo[`__${key.toUpperCase()}__`] = val
+  return memo
+}, {
+  __NODE_ENV__: JSON.stringify(NODE_ENV)
+})
+
+config.plugins = [
+  new webpack.DefinePlugin(defines)
+].concat(config.plugins)
 
 // Having hmre present in the .babelrc will break with the `babel-core/register` above
 // have to wait until that is done and then add it here via the loader query
