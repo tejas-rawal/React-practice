@@ -4,18 +4,14 @@
 # or operating system, you probably want to add a global ignore instead:
 # git config --global core.excludesfile ~/.gitignore_global
 
-# Ignore cache
-/.sass-cache
-/.cache
-
 #Ignore node dependencies
 /node_modules
 /dist
+.env
+yarn-error.log
 
 # Ignore .DS_store file
 .DS_Store
 
 # Icon
-.favicon.ico
-
-yarn-error.log
+favicon.ico
