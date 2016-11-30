@@ -16,4 +16,4 @@ ReactDOM.render(
   <App
     routes={routes}
     history={browserHistory} />,
-  mountNode)
+    mountNode)
